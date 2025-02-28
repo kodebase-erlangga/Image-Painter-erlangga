@@ -14,7 +14,12 @@ import 'widgets/_mode_widget.dart';
 import 'widgets/_range_slider.dart';
 import 'widgets/_text_dialog.dart';
 
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'package:whiteboard/widget/alertHapus.dart';
+import 'package:whiteboard/widget/alertSimpan.dart';
 export '_image_painter.dart';
+import 'package:whiteboard/widget/toolbar.dart';
 
 ///[ImagePainter] widget.
 @immutable
@@ -43,6 +48,7 @@ class ImagePainter extends StatefulWidget {
     this.onPaintModeChanged,
     this.textDelegate,
     this.showControls = true,
+    this.showToolbar = true,
     this.controlsBackgroundColor,
     this.optionSelectedColor,
     this.optionUnselectedColor,
@@ -71,6 +77,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool? controlsAtTop,
     bool? showControls,
+    bool? showToolbar,
     Color? controlsBackgroundColor,
     Color? selectedColor,
     Color? unselectedColor,
@@ -97,6 +104,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
       showControls: showControls ?? true,
+      showToolbar: showToolbar ?? true,
       controlsBackgroundColor: controlsBackgroundColor,
       optionSelectedColor: selectedColor,
       optionUnselectedColor: unselectedColor,
@@ -126,6 +134,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool? controlsAtTop,
     bool? showControls,
+    bool? showToolbar,
     Color? controlsBackgroundColor,
     Color? selectedColor,
     Color? unselectedColor,
@@ -152,6 +161,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
       showControls: showControls ?? true,
+      showToolbar: showToolbar ?? true,
       controlsBackgroundColor: controlsBackgroundColor,
       optionSelectedColor: selectedColor,
       optionUnselectedColor: unselectedColor,
@@ -181,6 +191,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool? controlsAtTop,
     bool? showControls,
+    bool? showToolbar,
     Color? controlsBackgroundColor,
     Color? selectedColor,
     Color? unselectedColor,
@@ -207,6 +218,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
       showControls: showControls ?? true,
+      showToolbar: showToolbar ?? true,
       controlsBackgroundColor: controlsBackgroundColor,
       optionSelectedColor: selectedColor,
       optionUnselectedColor: unselectedColor,
@@ -236,6 +248,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool? controlsAtTop,
     bool? showControls,
+    bool? showToolbar,
     Color? controlsBackgroundColor,
     Color? selectedColor,
     Color? unselectedColor,
@@ -262,6 +275,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
       showControls: showControls ?? true,
+      showToolbar: showToolbar ?? true,
       controlsBackgroundColor: controlsBackgroundColor,
       optionSelectedColor: selectedColor,
       optionUnselectedColor: unselectedColor,
@@ -289,6 +303,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool? controlsAtTop,
     bool? showControls,
+    bool? showToolbar,
     Color? controlsBackgroundColor,
     Color? selectedColor,
     Color? unselectedColor,
@@ -315,6 +330,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
       showControls: showControls ?? true,
+      showToolbar: showToolbar ?? true,
       controlsBackgroundColor: controlsBackgroundColor,
       optionSelectedColor: selectedColor,
       optionUnselectedColor: unselectedColor,
@@ -389,6 +405,8 @@ class ImagePainter extends StatefulWidget {
   ///It will control displaying the Control Bar
   final bool showControls;
 
+  final bool showToolbar;
+
   final Color? controlsBackgroundColor;
 
   final Color? optionSelectedColor;
@@ -407,6 +425,8 @@ class ImagePainter extends StatefulWidget {
 
 ///
 class ImagePainterState extends State<ImagePainter> {
+  bool _showToolbar = true;
+  bool _showControls = true;
   final _repaintKey = GlobalKey();
   ui.Image? _image;
   late final ImagePainterController _controller;
@@ -539,47 +559,104 @@ class ImagePainterState extends State<ImagePainter> {
     );
   }
 
-  ///paints image on given constrains for drawing if image is not null.
   Widget _paintImage() {
-    return Container(
-      height: widget.height ?? double.maxFinite,
-      width: widget.width ?? double.maxFinite,
-      child: Column(
-        children: [
-          if (widget.controlsAtTop && widget.showControls) _buildControls(),
-          Expanded(
-            child: FittedBox(
-              alignment: FractionalOffset.center,
-              child: ClipRect(
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return InteractiveViewer(
-                      transformationController: _transformationController,
-                      maxScale: 2.4,
-                      minScale: 1,
-                      panEnabled: _controller.mode == PaintMode.none,
-                      scaleEnabled: widget.isScalable!,
-                      onInteractionUpdate: _scaleUpdateGesture,
-                      onInteractionEnd: _scaleEndGesture,
-                      child: CustomPaint(
-                        size: imageSize,
-                        willChange: true,
-                        isComplex: true,
-                        painter: DrawImage(
-                          controller: _controller,
-                        ),
-                      ),
-                    );
-                  },
+    return Stack(
+      children: [
+        Container(
+          height: widget.height ?? double.maxFinite,
+          width: widget.width ?? double.maxFinite,
+          child: Column(
+            children: [
+              if (widget.controlsAtTop)
+                AnimatedOpacity(
+                  opacity: _showControls && _showToolbar ? 1.0 : 0.0,
+                  duration: Duration(milliseconds: 300),
+                  child: AnimatedSize(
+                    duration: Duration(milliseconds: 300),
+                    alignment: Alignment.topCenter,
+                    child: _showControls && _showToolbar
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildControls(),
+                            ],
+                          )
+                        : SizedBox.shrink(),
+                  ),
+                ),
+              Expanded(
+                child: FittedBox(
+                  alignment: FractionalOffset.center,
+                  child: ClipRect(
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        return InteractiveViewer(
+                          transformationController: _transformationController,
+                          maxScale: 2.4,
+                          minScale: 1,
+                          panEnabled: _controller.mode == PaintMode.none,
+                          scaleEnabled: widget.isScalable!,
+                          onInteractionUpdate: _scaleUpdateGesture,
+                          onInteractionEnd: _scaleEndGesture,
+                          child: CustomPaint(
+                            size: imageSize,
+                            willChange: true,
+                            isComplex: true,
+                            painter: DrawImage(
+                              controller: _controller,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
-            ),
+              if (!widget.controlsAtTop)
+                AnimatedOpacity(
+                  opacity: _showControls && _showToolbar ? 1.0 : 0.0,
+                  duration: Duration(milliseconds: 300),
+                  child: AnimatedSize(
+                    duration: Duration(milliseconds: 300),
+                    alignment: Alignment.bottomCenter,
+                    child: _showControls && _showToolbar
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildControls(),
+                              Toolbar(controller: _controller),
+                            ],
+                          )
+                        : SizedBox.shrink(),
+                  ),
+                ),
+              SizedBox(height: MediaQuery.of(context).padding.bottom)
+            ],
           ),
-          if (!widget.controlsAtTop && widget.showControls) _buildControls(),
-          SizedBox(height: MediaQuery.of(context).padding.bottom)
-        ],
-      ),
+        ),
+        Positioned(
+          left: 10,
+          top: 60,
+          child: Column(
+            children: [
+              FloatingActionButton(
+                mini: true,
+                child: Icon(
+                  _showToolbar ? Icons.visibility_off : Icons.visibility,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _showToolbar = !_showToolbar;
+                    _showControls = !_showControls;
+                  });
+                },
+              ),
+              if (_showToolbar) Toolbar(controller: _controller),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -616,7 +693,7 @@ class ImagePainterState extends State<ImagePainter> {
             ),
           ),
         ),
-        if (widget.showControls)
+        if (widget.showControls && widget.showToolbar)
           Positioned(
             top: 0,
             right: 0,
@@ -823,25 +900,29 @@ class ImagePainterState extends State<ImagePainter> {
 
   Widget _buildControls() {
     return Container(
-      padding: const EdgeInsets.all(4),
-      color: widget.controlsBackgroundColor ?? Colors.grey[200],
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: BoxDecoration(
+        color: widget.controlsBackgroundColor ?? Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (_, __) {
-              final icon = paintModes(textDelegate)
-                  .firstWhere((item) => item.mode == _controller.mode)
-                  .icon;
-              return PopupMenuButton(
-                tooltip: textDelegate.changeMode,
-                shape: ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                surfaceTintColor: Colors.transparent,
-                icon: Icon(icon, color: widget.optionColor ?? Colors.grey[700]),
-                itemBuilder: (_) => [_showOptionsRow()],
-              );
+          IconButton(
+            tooltip: "Sembunyikan Kontrol",
+            icon: Icon(Icons.close, color: Colors.transparent),
+            onPressed: () {
+              setState(() {
+                _showControls = false;
+                _showToolbar = false;
+              });
             },
           ),
           AnimatedBuilder(
@@ -849,7 +930,7 @@ class ImagePainterState extends State<ImagePainter> {
             builder: (_, __) {
               return PopupMenuButton(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: ContinuousRectangleBorder(
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
                 surfaceTintColor: Colors.transparent,
@@ -857,11 +938,11 @@ class ImagePainterState extends State<ImagePainter> {
                 icon: widget.colorIcon ??
                     Container(
                       padding: const EdgeInsets.all(2.0),
-                      height: 24,
-                      width: 24,
+                      height: 28,
+                      width: 28,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey),
+                        border: Border.all(color: Colors.grey.shade500),
                         color: _controller.color,
                       ),
                     ),
@@ -869,59 +950,102 @@ class ImagePainterState extends State<ImagePainter> {
               );
             },
           ),
-          PopupMenuButton(
-            tooltip: textDelegate.changeBrushSize,
-            surfaceTintColor: Colors.transparent,
-            shape: ContinuousRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            icon:
-                widget.brushIcon ?? Icon(Icons.brush, color: Colors.grey[700]),
-            itemBuilder: (_) => [_showRangeSlider()],
-          ),
           AnimatedBuilder(
             animation: _controller,
             builder: (_, __) {
-              if (_controller.canFill()) {
-                return Row(
-                  children: [
-                    Checkbox(
-                      value: _controller.shouldFill,
-                      onChanged: (val) {
-                        _controller.update(fill: val);
-                      },
-                    ),
-                    Text(
-                      textDelegate.fill,
-                      style: Theme.of(context).textTheme.bodyMedium,
+              return _controller.canFill()
+                  ? Row(
+                      children: [
+                        Checkbox.adaptive(
+                          value: _controller.shouldFill,
+                          activeColor: Colors.blue,
+                          onChanged: (val) {
+                            _controller.update(fill: val);
+                          },
+                        ),
+                        Text(
+                          textDelegate.fill,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
                     )
-                  ],
-                );
-              } else {
-                return const SizedBox();
-              }
+                  : const SizedBox();
             },
           ),
           const Spacer(),
           IconButton(
             tooltip: textDelegate.undo,
-            icon: widget.undoIcon ?? Icon(Icons.reply, color: Colors.grey[700]),
+            icon: widget.undoIcon ??
+                Icon(Icons.reply, color: Colors.grey.shade700, size: 26),
             onPressed: () {
               widget.onUndo?.call();
               _controller.undo();
             },
           ),
           IconButton(
-            tooltip: textDelegate.clearAllProgress,
-            icon: widget.clearAllIcon ??
-                Icon(Icons.clear, color: Colors.grey[700]),
+            tooltip: "Hapus Semua",
+            icon: Icon(Icons.delete, color: Colors.red.shade400, size: 26),
             onPressed: () {
-              widget.onClear?.call();
-              _controller.clear();
+              AlertHapus.show(context, () {
+                _controller.clear();
+              });
             },
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () async {
+              String? filePath = await simpanGambar(widget.controller, context);
+              if (filePath != null) {
+                AlertSimpan.show(context, filePath);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade600,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.save, color: Colors.white, size: 24),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Simpan",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<String?> simpanGambar(
+      ImagePainterController _controller, BuildContext context) async {
+    final image = await _controller.exportImage();
+    if (image == null) return null;
+
+    final imageName = '${DateTime.now().millisecondsSinceEpoch}.png';
+    final directory = await getApplicationDocumentsDirectory();
+    final sampleDir = Directory('${directory.path}/sample');
+    await sampleDir.create(recursive: true);
+    final fullPath = '${sampleDir.path}/$imageName';
+
+    final imgFile = File(fullPath);
+    await imgFile.writeAsBytes(image);
+
+    return fullPath;
   }
 }
